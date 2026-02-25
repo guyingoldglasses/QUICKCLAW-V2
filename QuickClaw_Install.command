@@ -569,6 +569,31 @@ read -n 1
 BACKUPEOF
 chmod +x "$INSTALL_ROOT/Backup OpenClaw.command"
 
+
+# Verify script
+cat > "$INSTALL_ROOT/Verify OpenClaw.command" << 'VERIFYEOF'
+#!/bin/bash
+clear
+echo ""
+echo "✅ OpenClaw Quick Verify"
+echo ""
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+export PATH="$ROOT/env/.fnm/aliases/default/bin:$ROOT/env/.npm-global/bin:$PATH"
+FAIL=0
+check(){ if eval "$2" >/dev/null 2>&1; then echo "  ✓ $1"; else echo "  ✕ $1"; FAIL=1; fi }
+check "Config exists" "test -f $HOME/.openclaw/openclaw.json"
+check "Dashboard server file" "test -f $ROOT/dashboard/server.js"
+check "OpenClaw CLI" "command -v openclaw"
+check "Node" "command -v node"
+if curl -sf http://localhost:18810/api/health >/dev/null 2>&1; then echo "  ✓ Dashboard health endpoint"; else echo "  ⚠ Dashboard not running (start first)"; fi
+if pgrep -f "openclaw.gateway" >/dev/null 2>&1; then echo "  ✓ Gateway process running"; else echo "  ⚠ Gateway not running (start first)"; fi
+echo ""
+if [[ $FAIL -eq 0 ]]; then echo "Ready."; else echo "Please fix failed checks."; fi
+read -n 1 -s -r -p "Press any key to close..."
+VERIFYEOF
+chmod +x "$INSTALL_ROOT/Verify OpenClaw.command"
+
+
 # Terminal helper (oc command)
 cat > "$INSTALL_ROOT/oc" << 'OCEOF'
 #!/bin/bash
@@ -585,6 +610,7 @@ echo -e "  ${GREEN}✓${NC} Start OpenClaw.command"
 echo -e "  ${GREEN}✓${NC} Stop OpenClaw.command"
 echo -e "  ${GREEN}✓${NC} Update OpenClaw.command"
 echo -e "  ${GREEN}✓${NC} Backup OpenClaw.command"
+echo -e "  ${GREEN}✓${NC} Verify OpenClaw.command"
 echo -e "  ${GREEN}✓${NC} oc (terminal shortcut)"
 
 # ─── Security ───
@@ -625,6 +651,7 @@ echo -e "       ├── ${GREEN}Start OpenClaw.command${NC}   — Launch every
 echo -e "       ├── ${RED}Stop OpenClaw.command${NC}    — Shut down safely"
 echo -e "       ├── ${BLUE}Update OpenClaw.command${NC}  — Update to latest"
 echo -e "       ├── ${YELLOW}Backup OpenClaw.command${NC}  — Backup configs"
+echo -e "       ├── ${BLUE}Verify OpenClaw.command${NC}  — Post-install checks"
 echo -e "       └── ${MAGENTA}oc${NC}                       — Terminal shortcut"
 echo ""
 echo -e "  ${DIM}Need help? Visit https://guyingoldglasses.com/install${NC}"
