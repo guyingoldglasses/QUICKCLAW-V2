@@ -422,18 +422,16 @@
             Detecting the correct folder path from this file...
         </p>
 
-        <details class="help-toggle">
-            <summary>Downloaded to a different folder?</summary>
+        <details class="help-toggle" id="manualHelp">
+            <summary>Command not detected? Click here</summary>
             <div class="help-content">
-                The command above assumes the ZIP was downloaded to your <strong>Downloads</strong> folder and the extracted folder is named <code>QUICKCLAW-V2-main</code> (the default from GitHub).
+                If the command above still says <code>Detecting folder...</code>, your browser likely blocked local path detection.
                 <br><br>
-                If you renamed it or moved it, adjust the path. For example, if you put it on your Desktop:
+                Use this format manually:
                 <br><br>
-                <code>bash ~/Desktop/QUICKCLAW-V2-main/QuickClaw_Setup.command</code>
+                <code>bash <strong>/full/path/to/your/QuickClaw-folder</strong>/QuickClaw_Setup.command</code>
                 <br><br>
-                If your folder is named differently (like <code>QuickClaw-v2</code>):
-                <br><br>
-                <code>bash ~/Downloads/QuickClaw-v2/QuickClaw_Setup.command</code>
+                <strong>Fast method:</strong> Open Terminal, type <code>bash </code> (with a space), then drag <code>QuickClaw_Setup.command</code> from Finder into Terminal and press Enter.
             </div>
         </details>
     </div>
