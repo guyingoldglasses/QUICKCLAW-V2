@@ -28,6 +28,7 @@ One-click OpenClaw installer for macOS (local or external SSD), with a **stable 
 | `QuickClaw_Install.command` | Core installer (OpenClaw + dashboard + launch scripts) |
 | `QuickClaw_Launch.command` | Finds install and starts services |
 | `QuickClaw Doctor.command` | Health checks and diagnostics |
+| `QuickClaw_Verify.command` | Post-install verification (core checks + readiness summary) |
 | `QuickClaw_Stop.command` | Safe shutdown (+ optional SSD eject) |
 | `dashboard-files/` | Command center dashboard server/frontend |
 
