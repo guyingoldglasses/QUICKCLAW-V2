@@ -1,0 +1,12 @@
+{
+  "name": "quickclaw-dashboard",
+  "version": "2.0.0",
+  "description": "QuickClaw management dashboard",
+  "private": true,
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.0"
+  }
+}

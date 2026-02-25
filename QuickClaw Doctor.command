@@ -1,160 +1,249 @@
 #!/bin/bash
-# ═══════════════════════════════════════════════════════════════════
-#  QuickClaw Doctor — Health check & troubleshooter
-# ═══════════════════════════════════════════════════════════════════
+# ============================================================================
+# QuickClaw Doctor.command — v2
+# Diagnoses common issues and suggests fixes
+# https://github.com/guyingoldglasses/QuickClaw
+# ============================================================================
 
-RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; CYAN='\033[0;36m'
-BOLD='\033[1m'; DIM='\033[2m'; NC='\033[0m'
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+INSTALL_DIR="$SCRIPT_DIR/openclaw"
+DASHBOARD_DIR="$SCRIPT_DIR/dashboard-files"
+CONFIG_DIR="$INSTALL_DIR/config"
+PID_DIR="$SCRIPT_DIR/.pids"
+LOG_DIR="$SCRIPT_DIR/logs"
 
-clear
-echo ""
-echo -e "${CYAN}${BOLD}  🩺 QuickClaw Doctor${NC}"
-echo -e "  ${DIM}Checking your OpenClaw installation...${NC}"
-echo ""
+# Colors
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+CYAN='\033[0;36m'
+BOLD='\033[1m'
+NC='\033[0m'
 
 ISSUES=0
 WARNINGS=0
 
-check() {
-  if eval "$2" &>/dev/null; then
-    echo -e "  ${GREEN}✓${NC} $1"
-  else
-    echo -e "  ${RED}✕${NC} $1 — $3"
-    ((ISSUES++))
-  fi
-}
-
-warn() {
-  if eval "$2" &>/dev/null; then
-    echo -e "  ${GREEN}✓${NC} $1"
-  else
-    echo -e "  ${YELLOW}⚠${NC} $1 — $3"
-    ((WARNINGS++))
-  fi
-}
-
-# Detect install location
-if [[ -d "$HOME/OpenClaw/env/.fnm" ]]; then
-  ROOT="$HOME/OpenClaw"
-  echo -e "  ${DIM}Install: Local Mac ($ROOT)${NC}"
-else
-  # Search external volumes
-  for vol in /Volumes/*/OpenClaw; do
-    if [[ -d "$vol/env/.fnm" ]]; then
-      ROOT="$vol"
-      break
-    fi
-  done
-  if [[ -z "$ROOT" ]]; then
-    echo -e "  ${RED}✕ Cannot find OpenClaw installation.${NC}"
-    echo "    Expected at ~/OpenClaw or /Volumes/*/OpenClaw"
-    echo ""; read -n 1 -s -r -p "Press any key to exit..."; exit 1
-  fi
-  echo -e "  ${DIM}Install: SSD ($ROOT)${NC}"
-fi
-
-# Source environment
-export FNM_DIR="$ROOT/env/.fnm"
-export PATH="$FNM_DIR/aliases/default/bin:$PATH"
-export NPM_CONFIG_PREFIX="$ROOT/env/.npm-global"
-export PATH="$NPM_CONFIG_PREFIX/bin:$PATH"
-
 echo ""
+echo -e "${CYAN}╔════════════════════════════════════════════╗${NC}"
+echo -e "${CYAN}║        ${BOLD}QuickClaw Doctor v2${NC}${CYAN}                 ║${NC}"
+echo -e "${CYAN}║        Diagnosing your installation...     ║${NC}"
+echo -e "${CYAN}╚════════════════════════════════════════════╝${NC}"
+echo ""
+
+check_pass() { echo -e "  ${GREEN}✓${NC}  $1"; }
+check_warn() { echo -e "  ${YELLOW}⚠${NC}  $1"; ((WARNINGS++)); }
+check_fail() { echo -e "  ${RED}✗${NC}  $1"; ((ISSUES++)); }
+
+# ---------------------------------------------------------------------------
+# System checks
+# ---------------------------------------------------------------------------
 echo -e "${BOLD}System${NC}"
-check "macOS" "test $(uname) = Darwin" "Not macOS"
-check "curl available" "command -v curl" "Install Xcode CLI tools"
+
+# macOS
+if [[ "$(uname)" == "Darwin" ]]; then
+    check_pass "macOS $(sw_vers -productVersion)"
+else
+    check_fail "Not macOS — QuickClaw is macOS only"
+fi
+
+# Architecture
+ARCH=$(uname -m)
+if [[ "$ARCH" == "arm64" ]]; then
+    check_pass "Apple Silicon ($ARCH)"
+elif [[ "$ARCH" == "x86_64" ]]; then
+    check_pass "Intel Mac ($ARCH)"
+else
+    check_warn "Unexpected architecture: $ARCH"
+fi
+
+# Disk space
+AVAILABLE_GB=$(df -g "$SCRIPT_DIR" 2>/dev/null | awk 'NR==2{print $4}')
+if [[ -n "$AVAILABLE_GB" ]]; then
+    if [[ "$AVAILABLE_GB" -ge 5 ]]; then
+        check_pass "Disk space: ${AVAILABLE_GB}GB available"
+    elif [[ "$AVAILABLE_GB" -ge 1 ]]; then
+        check_warn "Disk space low: ${AVAILABLE_GB}GB available"
+    else
+        check_fail "Disk space critical: ${AVAILABLE_GB}GB available"
+    fi
+fi
 
 echo ""
-echo -e "${BOLD}Runtime${NC}"
-check "fnm installed" "test -f $FNM_DIR/fnm" "Run QuickClaw Install"
-check "Node.js" "command -v node" "fnm install 22"
+echo -e "${BOLD}Dependencies${NC}"
+
+# Homebrew
+if command -v brew &>/dev/null; then
+    check_pass "Homebrew: $(brew --version | head -1)"
+else
+    check_fail "Homebrew not found — run QuickClaw_Install.command"
+fi
+
+# Node.js
 if command -v node &>/dev/null; then
-  VER=$(node --version 2>/dev/null)
-  echo -e "       ${DIM}Version: $VER${NC}"
-  warn "Node.js 22+" "node -e 'process.exit(parseInt(process.version.slice(1))<22?1:0)'" "Upgrade: fnm install 22"
-fi
-check "npm" "command -v npm" "Comes with Node.js"
-check "OpenClaw CLI" "command -v openclaw" "npm install -g openclaw"
-if command -v openclaw &>/dev/null; then
-  echo -e "       ${DIM}Version: $(openclaw --version 2>/dev/null)${NC}"
-fi
-warn "Antfarm" "command -v antfarm" "Optional: curl install from GitHub"
-
-echo ""
-echo -e "${BOLD}Configuration${NC}"
-check "Config dir exists" "test -d $HOME/.openclaw" "Run: openclaw configure"
-check "Config file" "test -f $HOME/.openclaw/openclaw.json" "Run: openclaw configure"
-check "Credentials dir" "test -d $HOME/.openclaw/credentials" "Run: openclaw configure"
-warn "Config permissions (700)" "test \$(stat -f %Lp $HOME/.openclaw 2>/dev/null) = 700" "Fix: chmod 700 ~/.openclaw"
-warn "Credentials permissions" "test \$(stat -f %Lp $HOME/.openclaw/credentials 2>/dev/null) = 700" "Fix: chmod 700 ~/.openclaw/credentials"
-
-echo ""
-echo -e "${BOLD}Workspace${NC}"
-check "Workspace exists" "test -d $ROOT/workspace" "mkdir -p $ROOT/workspace"
-warn "SOUL.md" "test -f $ROOT/workspace/SOUL.md" "Create a personality file"
-warn "skills/ dir" "test -d $ROOT/workspace/skills" "mkdir -p $ROOT/workspace/skills"
-SKILL_COUNT=$(ls -d "$ROOT/workspace/skills"/*/ 2>/dev/null | wc -l | tr -d ' ')
-echo -e "       ${DIM}Skills installed: $SKILL_COUNT${NC}"
-
-echo ""
-echo -e "${BOLD}Dashboard${NC}"
-check "Dashboard dir" "test -d $ROOT/dashboard" "Run QuickClaw Install"
-check "server.js" "test -f $ROOT/dashboard/server.js" "Download from GitHub"
-check "index.html" "test -f $ROOT/dashboard/public/index.html" "Download from GitHub"
-check "node_modules" "test -d $ROOT/dashboard/node_modules" "cd dashboard && npm install"
-warn "Auth token" "test -f $ROOT/dashboard/.auth-token" "Will be generated on first run"
-
-echo ""
-echo -e "${BOLD}Services${NC}"
-if pgrep -f "openclaw-gateway" > /dev/null 2>&1; then
-  echo -e "  ${GREEN}●${NC} Gateway: running (PID $(pgrep -f 'openclaw-gateway' | head -1))"
+    NODE_VER=$(node -v)
+    NODE_MAJOR=$(echo "$NODE_VER" | sed 's/v//' | cut -d. -f1)
+    if [[ "$NODE_MAJOR" -ge 18 ]]; then
+        check_pass "Node.js: $NODE_VER"
+    else
+        check_warn "Node.js $NODE_VER is old — recommend v18+"
+    fi
 else
-  echo -e "  ${DIM}○${NC} Gateway: stopped"
+    check_fail "Node.js not found"
 fi
-if pgrep -f "node server.js" > /dev/null 2>&1; then
-  echo -e "  ${GREEN}●${NC} Dashboard: running"
-  TOKEN=$(cat "$ROOT/dashboard/.auth-token" 2>/dev/null)
-  if [[ -n "$TOKEN" ]]; then
-    echo -e "       ${DIM}http://localhost:18810/?token=$TOKEN${NC}"
-  fi
+
+# npm
+if command -v npm &>/dev/null; then
+    check_pass "npm: $(npm -v)"
 else
-  echo -e "  ${DIM}○${NC} Dashboard: stopped"
+    check_fail "npm not found"
+fi
+
+# OpenClaw CLI
+if command -v open-claw &>/dev/null; then
+    check_pass "OpenClaw CLI: $(open-claw --version 2>/dev/null || echo 'found')"
+elif command -v openclaw &>/dev/null; then
+    check_pass "OpenClaw CLI (as openclaw): $(openclaw --version 2>/dev/null || echo 'found')"
+elif npx open-claw --version &>/dev/null 2>&1; then
+    check_pass "OpenClaw available via npx"
+else
+    check_fail "OpenClaw CLI not found — run QuickClaw_Install.command"
+fi
+
+# Antfarm
+if command -v antfarm &>/dev/null; then
+    check_pass "Antfarm: $(antfarm --version 2>/dev/null || echo 'found')"
+else
+    check_warn "Antfarm CLI not found — some features may be unavailable"
 fi
 
 echo ""
-echo -e "${BOLD}Network${NC}"
-FW=$(/usr/libexec/ApplicationFirewall/socketfilterfw --getglobalstate 2>/dev/null)
-if echo "$FW" | grep -q "enabled"; then
-  echo -e "  ${GREEN}✓${NC} macOS Firewall: enabled"
+echo -e "${BOLD}Installation${NC}"
+
+# Install directory
+if [[ -d "$INSTALL_DIR" ]]; then
+    check_pass "Install directory: $INSTALL_DIR"
 else
-  echo -e "  ${YELLOW}⚠${NC} macOS Firewall: disabled — enable in System Settings → Network → Firewall"
-  ((WARNINGS++))
+    check_fail "Install directory missing: $INSTALL_DIR"
+fi
+
+# Config
+if [[ -f "$CONFIG_DIR/default.yaml" ]]; then
+    check_pass "Config: $CONFIG_DIR/default.yaml"
+else
+    check_warn "No config found at $CONFIG_DIR/default.yaml"
+fi
+
+# Dashboard
+if [[ -f "$DASHBOARD_DIR/server.js" ]]; then
+    check_pass "Dashboard: server.js present"
+    if [[ -d "$DASHBOARD_DIR/node_modules" ]]; then
+        check_pass "Dashboard dependencies installed"
+    else
+        check_warn "Dashboard node_modules missing — run npm install in $DASHBOARD_DIR"
+    fi
+else
+    check_warn "Dashboard server.js not found"
+fi
+
+# Public index
+if [[ -f "$DASHBOARD_DIR/public/index.html" ]]; then
+    check_pass "Dashboard UI: index.html present"
+else
+    check_warn "Dashboard index.html missing"
 fi
 
 echo ""
-echo -e "${BOLD}Storage${NC}"
-if [[ "$ROOT" == /Volumes/* ]]; then
-  DISK_INFO=$(df -h "$(dirname "$ROOT")" | tail -1)
-  USED=$(echo "$DISK_INFO" | awk '{print $5}')
-  FREE=$(echo "$DISK_INFO" | awk '{print $4}')
-  echo -e "  ${DIM}SSD: ${USED} used, ${FREE} free${NC}"
+echo -e "${BOLD}Processes${NC}"
+
+# Gateway
+if [[ -f "$PID_DIR/gateway.pid" ]]; then
+    GW_PID=$(cat "$PID_DIR/gateway.pid")
+    if kill -0 "$GW_PID" 2>/dev/null; then
+        check_pass "Gateway running (PID $GW_PID)"
+    else
+        check_warn "Gateway PID file exists but process not running (stale PID $GW_PID)"
+    fi
 else
-  DISK_INFO=$(df -h "$ROOT" | tail -1)
-  FREE=$(echo "$DISK_INFO" | awk '{print $4}')
-  echo -e "  ${DIM}Disk: ${FREE} free${NC}"
+    check_warn "Gateway not running"
 fi
 
-# ─── Summary ───
-echo ""
-echo -e "${BOLD}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-if [[ $ISSUES -eq 0 && $WARNINGS -eq 0 ]]; then
-  echo -e "  ${GREEN}${BOLD}✓ All checks passed! Your installation is healthy.${NC}"
-elif [[ $ISSUES -eq 0 ]]; then
-  echo -e "  ${YELLOW}${BOLD}⚠ ${WARNINGS} warning(s), no critical issues.${NC}"
+# Dashboard process
+if [[ -f "$PID_DIR/dashboard.pid" ]]; then
+    DB_PID=$(cat "$PID_DIR/dashboard.pid")
+    if kill -0 "$DB_PID" 2>/dev/null; then
+        check_pass "Dashboard running (PID $DB_PID)"
+    else
+        check_warn "Dashboard PID file exists but process not running (stale PID $DB_PID)"
+    fi
 else
-  echo -e "  ${RED}${BOLD}✕ ${ISSUES} issue(s), ${WARNINGS} warning(s) found.${NC}"
-  echo -e "  ${DIM}Fix the issues marked with ✕ above.${NC}"
+    check_warn "Dashboard not running"
 fi
+
+# Port checks
+if lsof -i :3000 &>/dev/null; then
+    check_pass "Port 3000 in use (dashboard)"
+else
+    check_warn "Port 3000 free (dashboard not serving)"
+fi
+
+if lsof -i :5000 &>/dev/null; then
+    check_pass "Port 5000 in use (gateway)"
+else
+    check_warn "Port 5000 free (gateway not serving)"
+fi
+
 echo ""
-read -n 1 -s -r -p "  Press any key to close..."
+echo -e "${BOLD}Logs${NC}"
+
+if [[ -d "$LOG_DIR" ]]; then
+    check_pass "Log directory exists: $LOG_DIR"
+
+    # Show recent errors from gateway log
+    if [[ -f "$LOG_DIR/gateway.log" ]]; then
+        RECENT_ERRORS=$(tail -50 "$LOG_DIR/gateway.log" 2>/dev/null | grep -i "error" | tail -3)
+        if [[ -n "$RECENT_ERRORS" ]]; then
+            check_warn "Recent gateway errors:"
+            echo "$RECENT_ERRORS" | while IFS= read -r line; do
+                echo -e "        ${RED}$line${NC}"
+            done
+        else
+            check_pass "No recent gateway errors"
+        fi
+    fi
+
+    if [[ -f "$LOG_DIR/dashboard.log" ]]; then
+        RECENT_ERRORS=$(tail -50 "$LOG_DIR/dashboard.log" 2>/dev/null | grep -i "error" | tail -3)
+        if [[ -n "$RECENT_ERRORS" ]]; then
+            check_warn "Recent dashboard errors:"
+            echo "$RECENT_ERRORS" | while IFS= read -r line; do
+                echo -e "        ${RED}$line${NC}"
+            done
+        else
+            check_pass "No recent dashboard errors"
+        fi
+    fi
+else
+    check_warn "No log directory found"
+fi
+
+# ---------------------------------------------------------------------------
+# Summary
+# ---------------------------------------------------------------------------
+echo ""
+echo -e "${CYAN}────────────────────────────────────────────${NC}"
+
+if [[ "$ISSUES" -eq 0 && "$WARNINGS" -eq 0 ]]; then
+    echo -e "${GREEN}${BOLD}All clear.${NC} No issues found."
+elif [[ "$ISSUES" -eq 0 ]]; then
+    echo -e "${YELLOW}${BOLD}$WARNINGS warning(s).${NC} Nothing critical, but worth checking."
+else
+    echo -e "${RED}${BOLD}$ISSUES issue(s)${NC} and ${YELLOW}$WARNINGS warning(s)${NC} found."
+    echo "  Run QuickClaw_Install.command to fix missing components."
+fi
+
+echo ""
+echo "  For a quick pass/fail check, run: QuickClaw_Verify.command"
+echo "  Report bugs: https://github.com/guyingoldglasses/QuickClaw/issues"
+echo "               https://guyingoldglasses.com"
 echo ""

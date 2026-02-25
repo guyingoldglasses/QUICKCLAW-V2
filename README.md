@@ -1,97 +1,119 @@
-# ⚡ QuickClaw V2
+# QuickClaw v2
 
-One-click OpenClaw installer for macOS (local or external SSD), with a **stable core install** and optional **guided add-ons** after first launch.
+**One-click installer for [OpenClaw](https://github.com/open-claw) on macOS.**
 
-> **Hobby project disclaimer**
->
-> QuickClaw V2 is a community-driven hobby project. Bugs and rough edges are expected.
-> If you find issues, please report them so we can improve it together:
-> - GitHub Issues (this repo)
-> - https://guyingoldglasses.com
+QuickClaw gets OpenClaw running on your Mac with minimal setup — double-click to install, double-click to launch. Works on internal drives and external SSDs.
+
+> **Hobby project disclaimer:** QuickClaw is a community tool maintained by [Guy in Gold Glasses](https://guyingoldglasses.com). It is not officially affiliated with the OpenClaw project. Use at your own discretion. Things may break between upstream releases — that's normal.
 
 ---
 
-## V2 Goals
-
-- Keep core install simple and reliable
-- Add post-install verification checks
-- Add guided setup for optional advanced features
-- Preserve user control, portability, and low-cost operation
-- Keep updates safe with backup/rollback paths
-
----
-
-## What’s Included (Core)
+## What's in the box
 
 | File | Purpose |
-|---|---|
-| `QuickClaw_Install.command` | Core installer (OpenClaw + dashboard + launch scripts) |
-| `QuickClaw_Launch.command` | Finds install and starts services |
-| `QuickClaw Doctor.command` | Health checks and diagnostics |
-| `QuickClaw_Verify.command` | Post-install verification (core checks + readiness summary) |
-| `QuickClaw_Stop.command` | Safe shutdown (+ optional SSD eject) |
-| `dashboard-files/` | Command center dashboard server/frontend |
+|------|---------|
+| `QuickClaw_Install.command` | Installs Node.js (if needed), OpenClaw, Antfarm, and the dashboard |
+| `QuickClaw_Launch.command` | Starts OpenClaw + dashboard in one click |
+| `QuickClaw_Stop.command` | Gracefully stops all QuickClaw processes |
+| `QuickClaw Doctor.command` | Diagnoses common issues and suggests fixes |
+| `QuickClaw_Verify.command` | Runs pass/warn/fail health checks on your installation |
+
+## Quick start
+
+1. Download or clone this repo
+2. Double-click **QuickClaw_Install.command**
+3. Double-click **QuickClaw_Launch.command**
+4. Open `http://localhost:3000` in your browser
+
+That's it.
 
 ---
 
-## Install (macOS)
+## macOS Gatekeeper
 
-1. Download the **release ZIP** from GitHub Releases (recommended)
-2. Extract
-3. Double-click `QuickClaw_Install.command`
-4. Complete prompts
+macOS will likely block `.command` files from an unidentified developer. Here's how to get past that:
 
-### If macOS blocks opening `.command`
+### Option A — Right-click → Open (recommended)
 
-macOS Gatekeeper may block unsigned scripts. Try in this order:
+1. Right-click (or Control-click) the `.command` file
+2. Select **Open** from the context menu
+3. Click **Open** in the dialog that appears
+4. macOS remembers this choice — you only need to do it once per file
 
-1. Right-click file → **Open**
-2. If blocked, open **System Settings → Privacy & Security** and choose **Open Anyway**
-3. Re-run the file
+### Option B — System Settings
 
-Optional terminal fallback (advanced users):
+1. Double-click the file (it will be blocked)
+2. Open **System Settings → Privacy & Security**
+3. Scroll down — you'll see a message about the blocked file
+4. Click **Open Anyway**
+5. Confirm when prompted
+
+### Option C — Remove quarantine flag (advanced)
+
+If you're comfortable with Terminal, you can strip the quarantine attribute:
 
 ```bash
-xattr -dr com.apple.quarantine "/path/to/QuickClawV2"
+xattr -d com.apple.quarantine QuickClaw_Install.command
+xattr -d com.apple.quarantine QuickClaw_Launch.command
+xattr -d com.apple.quarantine QuickClaw_Stop.command
+xattr -d com.apple.quarantine "QuickClaw Doctor.command"
+xattr -d com.apple.quarantine QuickClaw_Verify.command
 ```
 
-Only run that command if you trust the source of the files.
+> **Caution:** Only do this for files you trust and have downloaded yourself. Removing quarantine flags bypasses a real security check.
 
 ---
 
-## V2 Architecture (Implementation Direction)
+## External SSD support
 
-### Stage 1: Core install
-- Minimal dependencies
-- Known-good path to working dashboard + gateway
-- No brittle optional integrations during core setup
+QuickClaw works fine on external SSDs. The installer detects its own location and installs relative to that path. Just keep the QuickClaw folder on whatever drive you prefer.
 
-### Stage 2: Guided add-ons (from dashboard)
-- Optional integrations and skill packs
-- Step-by-step setup with compatibility checks
-- Clear enable/disable controls
+If you move the folder after install, run `QuickClaw_Install.command` again to relink paths.
 
 ---
 
-## Planned V2 Additions
+## Dashboard
 
-- Safe mode install fallback
-- Post-install verification screen
-- One-click debug bundle export
-- Versioned feature packs
-- Rollback snapshots before updates
-- First-run onboarding checklist
-- Trust/safety panel (what is local vs external)
+The built-in dashboard runs at `http://localhost:3000` and gives you:
 
-See `docs/V2_PLAN.md` for details.
+- OpenClaw process status (running / stopped)
+- Quick start/stop controls
+- Log viewer
+- **Add-ons & Integrations** panel — check status and configure optional features like OpenAI auth, FTP, email, and skills bundles
+
+The dashboard is optional. OpenClaw works fine without it.
 
 ---
 
-## Community
+## Troubleshooting
 
-If you want to contribute ideas, testing results, or fixes:
-- Open an issue in this repo
-- Share practical feedback and reproducible steps
-- Join us through https://guyingoldglasses.com
+Run **QuickClaw Doctor.command** first — it catches most common issues.
 
-No hype, just useful improvements.
+Run **QuickClaw_Verify.command** for a quick pass/fail health check of your installation.
+
+If something is still broken:
+
+1. **GitHub Issues:** [github.com/guyingoldglasses/QuickClaw/issues](https://github.com/guyingoldglasses/QuickClaw/issues)
+2. **Website:** [guyingoldglasses.com](https://guyingoldglasses.com) — use the contact form or leave a comment
+
+Include the output of `QuickClaw Doctor.command` and `QuickClaw_Verify.command` in your report. It helps a lot.
+
+---
+
+## v2 changelog
+
+- Added `QuickClaw_Verify.command` for quick health checks
+- Dashboard: new Add-ons & Integrations section with status cards
+- Installer: updated to pull latest compatible OpenClaw + Antfarm
+- Installer: cleaner post-install summary with Verify reminder
+- Doctor: improved diagnostic checks
+- README: added Gatekeeper instructions, hobby disclaimer, bug reporting info
+- All scripts: safer error handling, preserved v1 behavior
+
+---
+
+## License
+
+MIT — do whatever you want with it.
+
+Built by [Guy in Gold Glasses](https://guyingoldglasses.com).
