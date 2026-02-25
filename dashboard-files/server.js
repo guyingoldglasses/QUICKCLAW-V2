@@ -266,21 +266,33 @@ app.post('/api/gateway/start', (req, res) => {
             fs.mkdirSync(LOG_DIR, { recursive: true });
         }
 
-        // Try to find the CLI
+        // Prefer local install first, then global CLI, then npx from INSTALL_DIR
+        const localOpenClaw = path.join(INSTALL_DIR, 'node_modules', '.bin', 'open-claw');
+        const localOpenclaw = path.join(INSTALL_DIR, 'node_modules', '.bin', 'openclaw');
+
         let cmd;
-        try {
-            execSync('which open-claw', { encoding: 'utf8' });
-            cmd = `open-claw start ${configFlag}`;
-        } catch {
+        let cwd = QUICKCLAW_ROOT;
+
+        if (fileExists(localOpenClaw)) {
+            cmd = `"${localOpenClaw}" start ${configFlag}`;
+        } else if (fileExists(localOpenclaw)) {
+            cmd = `"${localOpenclaw}" start ${configFlag}`;
+        } else {
             try {
-                execSync('which openclaw', { encoding: 'utf8' });
-                cmd = `openclaw start ${configFlag}`;
+                execSync('which open-claw', { encoding: 'utf8' });
+                cmd = `open-claw start ${configFlag}`;
             } catch {
-                cmd = `npx open-claw start ${configFlag}`;
+                try {
+                    execSync('which openclaw', { encoding: 'utf8' });
+                    cmd = `openclaw start ${configFlag}`;
+                } catch {
+                    cmd = `npx open-claw start ${configFlag}`;
+                    cwd = INSTALL_DIR;
+                }
             }
         }
 
-        const child = exec(`${cmd} >> "${logPath}" 2>&1`);
+        const child = exec(`${cmd} >> "${logPath}" 2>&1`, { cwd });
         if (child.pid) {
             // Ensure PID dir exists
             if (!fileExists(PID_DIR)) {

@@ -81,27 +81,45 @@ echo -e "${BLUE}[info]${NC}  Starting OpenClaw gateway..."
 GATEWAY_LOG="$LOG_DIR/gateway.log"
 CONFIG_FILE="$INSTALL_DIR/config/default.yaml"
 
+# Build config args safely (supports spaces in paths)
+CONFIG_ARGS=()
 if [[ -f "$CONFIG_FILE" ]]; then
-    CONFIG_FLAG="--config $CONFIG_FILE"
-else
-    CONFIG_FLAG=""
+    CONFIG_ARGS=(--config "$CONFIG_FILE")
 fi
 
-# Try known commands in order
+# Try known commands in order, preferring local install in QuickClaw/openclaw
 GATEWAY_STARTED=false
 
-if command -v open-claw &>/dev/null; then
-    nohup open-claw start $CONFIG_FLAG >> "$GATEWAY_LOG" 2>&1 &
+start_gateway_bin() {
+    local bin="$1"
+    nohup "$bin" start "${CONFIG_ARGS[@]}" >> "$GATEWAY_LOG" 2>&1 &
     echo $! > "$PID_DIR/gateway.pid"
     GATEWAY_STARTED=true
+}
+
+start_gateway_npx() {
+    local pkg="$1"
+    local prev_dir="$PWD"
+    cd "$INSTALL_DIR" || return 1
+    nohup npx "$pkg" start "${CONFIG_ARGS[@]}" >> "$GATEWAY_LOG" 2>&1 &
+    local pid=$!
+    cd "$prev_dir" || true
+    echo "$pid" > "$PID_DIR/gateway.pid"
+    GATEWAY_STARTED=true
+}
+
+if [[ -x "$INSTALL_DIR/node_modules/.bin/open-claw" ]]; then
+    start_gateway_bin "$INSTALL_DIR/node_modules/.bin/open-claw"
+elif [[ -x "$INSTALL_DIR/node_modules/.bin/openclaw" ]]; then
+    start_gateway_bin "$INSTALL_DIR/node_modules/.bin/openclaw"
+elif command -v open-claw &>/dev/null; then
+    start_gateway_bin "open-claw"
 elif command -v openclaw &>/dev/null; then
-    nohup openclaw start $CONFIG_FLAG >> "$GATEWAY_LOG" 2>&1 &
-    echo $! > "$PID_DIR/gateway.pid"
-    GATEWAY_STARTED=true
-elif npx open-claw --version &>/dev/null 2>&1; then
-    nohup npx open-claw start $CONFIG_FLAG >> "$GATEWAY_LOG" 2>&1 &
-    echo $! > "$PID_DIR/gateway.pid"
-    GATEWAY_STARTED=true
+    start_gateway_bin "openclaw"
+elif (cd "$INSTALL_DIR" && npx open-claw --version &>/dev/null 2>&1); then
+    start_gateway_npx "open-claw"
+elif (cd "$INSTALL_DIR" && npx openclaw --version &>/dev/null 2>&1); then
+    start_gateway_npx "openclaw"
 fi
 
 if [[ "$GATEWAY_STARTED" == true ]]; then
