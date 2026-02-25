@@ -57,14 +57,45 @@ function ensureWithinRoot(rawPath, base = QUICKCLAW_ROOT) {
   if (resolved === baseResolved || resolved.startsWith(baseResolved + path.sep)) return resolved;
   throw new Error('Path outside QuickClaw root is not allowed');
 }
-function gatewayStartCommand(configFlag = '') {
+function gatewayCandidates() {
   const localA = path.join(INSTALL_DIR, 'node_modules', '.bin', 'open-claw');
   const localB = path.join(INSTALL_DIR, 'node_modules', '.bin', 'openclaw');
-  if (fileExists(localA)) return { cmd: `"${localA}" start ${configFlag}`.trim(), cwd: QUICKCLAW_ROOT };
-  if (fileExists(localB)) return { cmd: `"${localB}" start ${configFlag}`.trim(), cwd: QUICKCLAW_ROOT };
-  try { execSync('which open-claw', { stdio: 'ignore' }); return { cmd: `open-claw start ${configFlag}`.trim(), cwd: QUICKCLAW_ROOT }; } catch {}
-  try { execSync('which openclaw', { stdio: 'ignore' }); return { cmd: `openclaw start ${configFlag}`.trim(), cwd: QUICKCLAW_ROOT }; } catch {}
-  return { cmd: `npx open-claw start ${configFlag}`.trim(), cwd: INSTALL_DIR };
+  const cmds = [];
+
+  if (fileExists(localA)) {
+    cmds.push({ cmd: `"${localA}" gateway start`, cwd: INSTALL_DIR });
+    cmds.push({ cmd: `"${localA}" start`, cwd: INSTALL_DIR });
+  }
+  if (fileExists(localB)) {
+    cmds.push({ cmd: `"${localB}" gateway start`, cwd: INSTALL_DIR });
+    cmds.push({ cmd: `"${localB}" start`, cwd: INSTALL_DIR });
+  }
+
+  try {
+    execSync('which open-claw', { stdio: 'ignore' });
+    cmds.push({ cmd: 'open-claw gateway start', cwd: INSTALL_DIR });
+    cmds.push({ cmd: 'open-claw start', cwd: INSTALL_DIR });
+  } catch {}
+
+  try {
+    execSync('which openclaw', { stdio: 'ignore' });
+    cmds.push({ cmd: 'openclaw gateway start', cwd: INSTALL_DIR });
+    cmds.push({ cmd: 'openclaw start', cwd: INSTALL_DIR });
+  } catch {}
+
+  cmds.push({ cmd: 'npx open-claw gateway start', cwd: INSTALL_DIR });
+  cmds.push({ cmd: 'npx open-claw start', cwd: INSTALL_DIR });
+  cmds.push({ cmd: 'npx openclaw gateway start', cwd: INSTALL_DIR });
+  cmds.push({ cmd: 'npx openclaw start', cwd: INSTALL_DIR });
+
+  // de-dupe
+  const seen = new Set();
+  return cmds.filter(({ cmd, cwd }) => {
+    const k = `${cwd}::${cmd}`;
+    if (seen.has(k)) return false;
+    seen.add(k);
+    return true;
+  });
 }
 
 function profileFile() { return path.join(DATA_DIR, 'profiles.json'); }
@@ -148,25 +179,49 @@ app.get('/api/addons', (req, res) => {
   });
 });
 
-app.post('/api/gateway/start', (req, res) => {
+app.post('/api/gateway/start', async (req, res) => {
   const existing = readPid('gateway');
   if (existing) return res.json({ success: true, message: 'Gateway already running', pid: existing });
 
-  const cPath = cfgPath();
-  const configFlag = fileExists(cPath) ? `--config "${cPath}"` : '';
   const logPath = path.join(LOG_DIR, 'gateway.log');
-  const { cmd, cwd } = gatewayStartCommand(configFlag);
+  const attempts = [];
 
-  try {
-    const child = exec(`${cmd} >> "${logPath}" 2>&1`, { cwd });
-    if (child.pid) {
-      fs.writeFileSync(path.join(PID_DIR, 'gateway.pid'), String(child.pid));
+  const tryCandidate = (candidate) => new Promise((resolve) => {
+    try {
+      const child = exec(`${candidate.cmd} >> "${logPath}" 2>&1`, { cwd: candidate.cwd });
+      const pid = child.pid;
+      if (!pid) return resolve({ ok: false, reason: 'no pid', candidate });
+
+      fs.writeFileSync(path.join(PID_DIR, 'gateway.pid'), String(pid));
       child.unref();
+
+      setTimeout(() => {
+        try {
+          process.kill(pid, 0);
+          return resolve({ ok: true, pid, candidate });
+        } catch {
+          try { fs.unlinkSync(path.join(PID_DIR, 'gateway.pid')); } catch {}
+          return resolve({ ok: false, reason: 'exited quickly', candidate, pid });
+        }
+      }, 1800);
+    } catch (e) {
+      resolve({ ok: false, reason: e.message, candidate });
     }
-    res.json({ success: true, message: 'Gateway starting...', pid: child.pid, command: cmd });
-  } catch (e) {
-    res.json({ success: false, message: `Failed to start gateway: ${e.message}` });
+  });
+
+  for (const candidate of gatewayCandidates()) {
+    const result = await tryCandidate(candidate);
+    attempts.push(result);
+    if (result.ok) {
+      return res.json({ success: true, message: 'Gateway started', pid: result.pid, command: candidate.cmd, cwd: candidate.cwd });
+    }
   }
+
+  res.json({
+    success: false,
+    message: 'Gateway failed to start with all command variants. Check logs/gateway.log',
+    attempts: attempts.map(a => ({ ok: a.ok, cmd: a.candidate?.cmd, cwd: a.candidate?.cwd, reason: a.reason }))
+  });
 });
 
 app.post('/api/gateway/stop', (req, res) => {
@@ -189,11 +244,10 @@ app.post('/api/dashboard/restart', async (req, res) => {
     try { fs.unlinkSync(path.join(PID_DIR, 'gateway.pid')); } catch {}
   }
   setTimeout(() => {
-    const cPath = cfgPath();
-    const configFlag = fileExists(cPath) ? `--config "${cPath}"` : '';
     const logPath = path.join(LOG_DIR, 'gateway.log');
-    const { cmd, cwd } = gatewayStartCommand(configFlag);
-    const child = exec(`${cmd} >> "${logPath}" 2>&1`, { cwd });
+    const first = gatewayCandidates()[0];
+    if (!first) return;
+    const child = exec(`${first.cmd} >> "${logPath}" 2>&1`, { cwd: first.cwd });
     if (child.pid) {
       fs.writeFileSync(path.join(PID_DIR, 'gateway.pid'), String(child.pid));
       child.unref();

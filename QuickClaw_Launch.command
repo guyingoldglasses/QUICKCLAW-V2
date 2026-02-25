@@ -81,58 +81,100 @@ echo -e "${BLUE}[info]${NC}  Starting OpenClaw gateway..."
 GATEWAY_LOG="$LOG_DIR/gateway.log"
 CONFIG_FILE="$INSTALL_DIR/config/default.yaml"
 
-# Build config args safely (supports spaces in paths)
-CONFIG_ARGS=()
-if [[ -f "$CONFIG_FILE" ]]; then
-    CONFIG_ARGS=(--config "$CONFIG_FILE")
-fi
+# We intentionally avoid forcing --config because CLI flags can differ by version.
+# Running from INSTALL_DIR lets the gateway discover config/default.yaml locally.
 
-# Try known commands in order, preferring local install in QuickClaw/openclaw
 GATEWAY_STARTED=false
+LAST_GATEWAY_CMD=""
 
-start_gateway_bin() {
-    local bin="$1"
-    nohup "$bin" start "${CONFIG_ARGS[@]}" >> "$GATEWAY_LOG" 2>&1 &
-    echo $! > "$PID_DIR/gateway.pid"
-    GATEWAY_STARTED=true
-}
-
-start_gateway_npx() {
-    local pkg="$1"
+try_start_gateway() {
+    local mode="$1"   # bin | npx
+    local target="$2" # binary path/name or package name
     local prev_dir="$PWD"
-    cd "$INSTALL_DIR" || return 1
-    nohup npx "$pkg" start "${CONFIG_ARGS[@]}" >> "$GATEWAY_LOG" 2>&1 &
+
+    cd "$INSTALL_DIR" 2>/dev/null || return 1
+
+    if [[ "$mode" == "bin" ]]; then
+        nohup "$target" gateway start >> "$GATEWAY_LOG" 2>&1 &
+    else
+        nohup npx "$target" gateway start >> "$GATEWAY_LOG" 2>&1 &
+    fi
+
     local pid=$!
     cd "$prev_dir" || true
+
     echo "$pid" > "$PID_DIR/gateway.pid"
-    GATEWAY_STARTED=true
+    sleep 2
+
+    if kill -0 "$pid" 2>/dev/null; then
+        GATEWAY_STARTED=true
+        return 0
+    fi
+
+    # Fallback for older CLI shape: `<cli> start`
+    cd "$INSTALL_DIR" 2>/dev/null || return 1
+    if [[ "$mode" == "bin" ]]; then
+        nohup "$target" start >> "$GATEWAY_LOG" 2>&1 &
+    else
+        nohup npx "$target" start >> "$GATEWAY_LOG" 2>&1 &
+    fi
+    pid=$!
+    cd "$prev_dir" || true
+
+    echo "$pid" > "$PID_DIR/gateway.pid"
+    sleep 2
+
+    if kill -0 "$pid" 2>/dev/null; then
+        GATEWAY_STARTED=true
+        return 0
+    fi
+
+    rm -f "$PID_DIR/gateway.pid"
+    return 1
 }
 
-if [[ -x "$INSTALL_DIR/node_modules/.bin/open-claw" ]]; then
-    start_gateway_bin "$INSTALL_DIR/node_modules/.bin/open-claw"
-elif [[ -x "$INSTALL_DIR/node_modules/.bin/openclaw" ]]; then
-    start_gateway_bin "$INSTALL_DIR/node_modules/.bin/openclaw"
-elif command -v open-claw &>/dev/null; then
-    start_gateway_bin "open-claw"
-elif command -v openclaw &>/dev/null; then
-    start_gateway_bin "openclaw"
-elif (cd "$INSTALL_DIR" && npx open-claw --version &>/dev/null 2>&1); then
-    start_gateway_npx "open-claw"
-elif (cd "$INSTALL_DIR" && npx openclaw --version &>/dev/null 2>&1); then
-    start_gateway_npx "openclaw"
+# Candidate order: local install first, then global, then npx
+LOCAL_BIN_A="$INSTALL_DIR/node_modules/.bin/open-claw"
+LOCAL_BIN_B="$INSTALL_DIR/node_modules/.bin/openclaw"
+
+if [[ -x "$LOCAL_BIN_A" ]]; then
+    LAST_GATEWAY_CMD="$LOCAL_BIN_A gateway start"
+    try_start_gateway "bin" "$LOCAL_BIN_A"
+fi
+
+if [[ "$GATEWAY_STARTED" != true && -x "$LOCAL_BIN_B" ]]; then
+    LAST_GATEWAY_CMD="$LOCAL_BIN_B gateway start"
+    try_start_gateway "bin" "$LOCAL_BIN_B"
+fi
+
+if [[ "$GATEWAY_STARTED" != true && $(command -v open-claw >/dev/null 2>&1; echo $?) -eq 0 ]]; then
+    LAST_GATEWAY_CMD="open-claw gateway start"
+    try_start_gateway "bin" "open-claw"
+fi
+
+if [[ "$GATEWAY_STARTED" != true && $(command -v openclaw >/dev/null 2>&1; echo $?) -eq 0 ]]; then
+    LAST_GATEWAY_CMD="openclaw gateway start"
+    try_start_gateway "bin" "openclaw"
+fi
+
+if [[ "$GATEWAY_STARTED" != true ]]; then
+    LAST_GATEWAY_CMD="npx open-claw gateway start"
+    try_start_gateway "npx" "open-claw"
+fi
+
+if [[ "$GATEWAY_STARTED" != true ]]; then
+    LAST_GATEWAY_CMD="npx openclaw gateway start"
+    try_start_gateway "npx" "openclaw"
 fi
 
 if [[ "$GATEWAY_STARTED" == true ]]; then
-    sleep 2
     GW_PID=$(cat "$PID_DIR/gateway.pid")
-    if kill -0 "$GW_PID" 2>/dev/null; then
-        echo -e "${GREEN}[ok]${NC}    Gateway started (PID $GW_PID)"
-        echo -e "        Log: $GATEWAY_LOG"
-    else
-        echo -e "${RED}[fail]${NC}  Gateway process exited. Check $GATEWAY_LOG"
-    fi
+    echo -e "${GREEN}[ok]${NC}    Gateway started (PID $GW_PID)"
+    echo -e "        Log: $GATEWAY_LOG"
 else
-    echo -e "${RED}[fail]${NC}  OpenClaw CLI not found. Run QuickClaw_Install.command first."
+    echo -e "${RED}[fail]${NC}  Gateway did not start after trying multiple commands."
+    echo -e "        Last attempted: $LAST_GATEWAY_CMD"
+    echo -e "        Check log: $GATEWAY_LOG"
 fi
 
 # ---------------------------------------------------------------------------
