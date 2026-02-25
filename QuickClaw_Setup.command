@@ -11,6 +11,7 @@ clear
 # Colors
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
 CYAN='\033[0;36m'
 BOLD='\033[1m'
 NC='\033[0m'
@@ -28,7 +29,7 @@ echo ""
 echo "  This will:"
 echo "    1. Allow all QuickClaw scripts to run on your Mac"
 echo "    2. Install OpenClaw and its dependencies"
-echo "    3. Set up the QuickClaw dashboard"
+echo "    3. Launch the dashboard and open your browser"
 echo ""
 echo -e "  Location: ${BOLD}$SCRIPT_DIR${NC}"
 echo ""
@@ -47,7 +48,7 @@ echo ""
 # ---------------------------------------------------------------------------
 # Step 1: Remove quarantine flags from all QuickClaw files
 # ---------------------------------------------------------------------------
-echo -e "${CYAN}Step 1 of 2:${NC} Preparing files..."
+echo -e "${CYAN}Step 1 of 3:${NC} Preparing files..."
 echo ""
 
 FILE_COUNT=0
@@ -85,7 +86,7 @@ echo ""
 # ---------------------------------------------------------------------------
 # Step 2: Run the installer
 # ---------------------------------------------------------------------------
-echo -e "${CYAN}Step 2 of 2:${NC} Running QuickClaw installer..."
+echo -e "${CYAN}Step 2 of 3:${NC} Running QuickClaw installer..."
 echo ""
 
 INSTALLER="$SCRIPT_DIR/QuickClaw_Install.command"
@@ -101,6 +102,36 @@ else
 fi
 
 # ---------------------------------------------------------------------------
+# Step 3: Auto-launch dashboard and open browser
+# ---------------------------------------------------------------------------
+
+# Find where we actually installed (could be external drive)
+if [[ -f "$SCRIPT_DIR/.quickclaw-root" ]]; then
+    ACTUAL_ROOT=$(cat "$SCRIPT_DIR/.quickclaw-root")
+else
+    ACTUAL_ROOT="$SCRIPT_DIR"
+fi
+
+LAUNCHER="$ACTUAL_ROOT/QuickClaw_Launch.command"
+
+echo -e "${CYAN}Step 3 of 3:${NC} Starting QuickClaw..."
+echo ""
+
+if [[ -f "$LAUNCHER" ]]; then
+    bash "$LAUNCHER"
+
+    # Give the dashboard a moment to start
+    sleep 3
+
+    # Auto-open browser
+    echo -e "${BLUE}[info]${NC}  Opening dashboard in your browser..."
+    open "http://localhost:3000"
+else
+    warn "Launch script not found at $LAUNCHER"
+    echo "     You can start manually by double-clicking QuickClaw_Launch.command"
+fi
+
+# ---------------------------------------------------------------------------
 # Done
 # ---------------------------------------------------------------------------
 echo ""
@@ -110,15 +141,23 @@ echo -e "${CYAN}║          ${BOLD}Setup complete!${NC}${CYAN}                 
 echo -e "${CYAN}║                                                        ║${NC}"
 echo -e "${CYAN}╚════════════════════════════════════════════════════════╝${NC}"
 echo ""
-echo "  From now on, you can just double-click these files:"
+echo -e "  ${GREEN}The dashboard should be open in your browser.${NC}"
+echo -e "  If not, go to: ${BOLD}http://localhost:3000${NC}"
 echo ""
-echo -e "    ${BOLD}QuickClaw_Launch.command${NC}   → Start OpenClaw"
-echo -e "    ${BOLD}QuickClaw_Stop.command${NC}     → Stop OpenClaw"
+
+# Show the right path if installed to external drive
+if [[ "$ACTUAL_ROOT" != "$SCRIPT_DIR" ]]; then
+    echo -e "  ${YELLOW}Important:${NC} QuickClaw was installed to your external drive."
+    echo -e "  Use the scripts at: ${BOLD}$ACTUAL_ROOT${NC}"
+    echo ""
+fi
+
+echo "  From now on, just double-click these files:"
+echo ""
+echo -e "    ${BOLD}QuickClaw_Launch.command${NC}   → Start OpenClaw + dashboard"
+echo -e "    ${BOLD}QuickClaw_Stop.command${NC}     → Stop everything"
 echo -e "    ${BOLD}QuickClaw_Verify.command${NC}   → Check installation health"
 echo -e "    ${BOLD}QuickClaw Doctor.command${NC}   → Troubleshoot issues"
 echo ""
 echo "  You won't need to run this setup again."
-echo ""
-echo -e "  ${GREEN}Tip:${NC} Launch now? Just double-click ${BOLD}QuickClaw_Launch.command${NC}"
-echo -e "  then open ${BOLD}http://localhost:3000${NC} in your browser."
 echo ""
