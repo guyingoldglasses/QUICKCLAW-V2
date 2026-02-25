@@ -12,6 +12,8 @@ QuickClaw gets OpenClaw running on your Mac with minimal setup — double-click 
 
 | File | Purpose |
 |------|---------|
+| `START_HERE.html` | **Open this first.** Visual setup guide — works in any browser |
+| `QuickClaw_Setup.command` | One-time bootstrap — unlocks all scripts and runs the installer |
 | `QuickClaw_Install.command` | Installs Node.js (if needed), OpenClaw, Antfarm, and the dashboard |
 | `QuickClaw_Launch.command` | Starts OpenClaw + dashboard in one click |
 | `QuickClaw_Stop.command` | Gracefully stops all QuickClaw processes |
@@ -20,18 +22,32 @@ QuickClaw gets OpenClaw running on your Mac with minimal setup — double-click 
 
 ## Quick start
 
-1. Download or clone this repo
-2. Double-click **QuickClaw_Install.command**
-3. Double-click **QuickClaw_Launch.command**
-4. Open `http://localhost:3000` in your browser
+### First time (download from GitHub)
 
-That's it.
+1. Click **Code → Download ZIP** on GitHub and unzip the folder
+2. Open **`START_HERE.html`** — it opens in your browser with visual instructions
+3. Follow the one-step setup (copy one line into Terminal, press Enter)
+4. Done — from now on, just double-click the `.command` files to use QuickClaw
+
+### If you use git
+
+```bash
+git clone https://github.com/guyingoldglasses/QuickClaw.git
+cd QuickClaw
+double-click QuickClaw_Install.command
+```
+
+Files pulled via `git clone` skip the Gatekeeper step entirely.
 
 ---
 
 ## macOS Gatekeeper
 
-macOS will likely block `.command` files from an unidentified developer. Here's how to get past that:
+macOS blocks downloaded scripts by default. **The easiest fix is to open `START_HERE.html` and follow the one-step setup** — it handles everything.
+
+If you've already done that (or used `git clone`), you can skip this section entirely.
+
+For reference, here are the manual approaches:
 
 ### Option A — Right-click → Open (recommended)
 
@@ -102,6 +118,8 @@ Include the output of `QuickClaw Doctor.command` and `QuickClaw_Verify.command` 
 
 ## v2 changelog
 
+- **Added `START_HERE.html`** — visual setup guide that opens in any browser, no Gatekeeper issues
+- **Added `QuickClaw_Setup.command`** — one-time bootstrap that unquarantines all scripts and runs install
 - Added `QuickClaw_Verify.command` for quick health checks
 - Dashboard: new Add-ons & Integrations section with status cards
 - Installer: updated to pull latest compatible OpenClaw + Antfarm

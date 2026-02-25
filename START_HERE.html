@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QuickClaw — Start Here</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=JetBrains+Mono:wght@400;500&display=swap');
+
+        :root {
+            --bg: #111214;
+            --bg-elevated: #1a1c1f;
+            --bg-card: #1f2225;
+            --border: #2d3035;
+            --border-accent: #3d6e9e;
+            --text: #e8e9eb;
+            --text-secondary: #8b8f96;
+            --text-muted: #5a5e65;
+            --accent: #5b9bd5;
+            --accent-glow: rgba(91, 155, 213, 0.15);
+            --green: #4eca6a;
+            --green-glow: rgba(78, 202, 106, 0.1);
+            --warm: #d4a843;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'DM Sans', -apple-system, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 40px 20px 60px;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* ---- Hero ---- */
+        .hero {
+            text-align: center;
+            margin-bottom: 48px;
+            max-width: 520px;
+        }
+
+        .hero-icon {
+            width: 64px;
+            height: 64px;
+            background: var(--accent-glow);
+            border: 1.5px solid var(--border-accent);
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 24px;
+            font-size: 28px;
+        }
+
+        .hero h1 {
+            font-size: 32px;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+            margin-bottom: 12px;
+        }
+
+        .hero p {
+            font-size: 16px;
+            color: var(--text-secondary);
+            line-height: 1.6;
+        }
+
+        /* ---- Steps ---- */
+        .steps {
+            max-width: 580px;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+        }
+
+        .step {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 28px;
+            position: relative;
+        }
+
+        .step-number {
+            position: absolute;
+            top: -12px;
+            left: 24px;
+            background: var(--accent);
+            color: #fff;
+            font-size: 13px;
+            font-weight: 700;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 2px 8px rgba(91, 155, 213, 0.3);
+        }
+
+        .step h2 {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 8px;
+            letter-spacing: -0.2px;
+        }
+
+        .step p {
+            font-size: 14px;
+            color: var(--text-secondary);
+            line-height: 1.6;
+            margin-bottom: 16px;
+        }
+
+        .step p:last-child {
+            margin-bottom: 0;
+        }
+
+        /* ---- Keyboard shortcut visual ---- */
+        .shortcut-visual {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            background: var(--bg-elevated);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 16px 20px;
+            margin: 16px 0;
+        }
+
+        .keys {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            flex-shrink: 0;
+        }
+
+        .key {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-bottom: 2px solid var(--border);
+            border-radius: 6px;
+            padding: 6px 12px;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text);
+            white-space: nowrap;
+        }
+
+        .key-plus {
+            color: var(--text-muted);
+            font-size: 14px;
+        }
+
+        .shortcut-label {
+            font-size: 13px;
+            color: var(--text-secondary);
+            line-height: 1.5;
+        }
+
+        /* ---- Command box ---- */
+        .command-box {
+            position: relative;
+            background: #0d0e10;
+            border: 1.5px solid var(--border-accent);
+            border-radius: 10px;
+            padding: 18px 20px;
+            margin: 16px 0;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            box-shadow: 0 0 20px var(--accent-glow);
+        }
+
+        .command-prompt {
+            color: var(--accent);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 14px;
+            flex-shrink: 0;
+            user-select: none;
+        }
+
+        .command-text {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 13px;
+            color: var(--text);
+            flex-grow: 1;
+            word-break: break-all;
+            line-height: 1.5;
+            user-select: all;
+        }
+
+        .copy-btn {
+            flex-shrink: 0;
+            background: var(--accent);
+            color: #fff;
+            border: none;
+            border-radius: 6px;
+            padding: 8px 16px;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.15s;
+            white-space: nowrap;
+        }
+
+        .copy-btn:hover {
+            filter: brightness(1.1);
+            transform: translateY(-1px);
+        }
+
+        .copy-btn:active {
+            transform: translateY(0);
+        }
+
+        .copy-btn.copied {
+            background: var(--green);
+        }
+
+        /* ---- Screenshot hint ---- */
+        .screenshot-hint {
+            background: var(--bg-elevated);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 16px 20px;
+            margin: 16px 0;
+        }
+
+        .screenshot-hint .hint-title {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--warm);
+            margin-bottom: 6px;
+        }
+
+        .screenshot-hint p {
+            font-size: 13px;
+            color: var(--text-secondary);
+            margin-bottom: 0;
+        }
+
+        /* ---- Terminal mockup ---- */
+        .terminal-mock {
+            background: #0d0e10;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 16px 0;
+        }
+
+        .terminal-titlebar {
+            background: var(--bg-elevated);
+            padding: 10px 14px;
+            display: flex;
+            align-items: center;
+            gap: 7px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .terminal-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+        }
+
+        .terminal-dot.red { background: #ec6a5e; }
+        .terminal-dot.yellow { background: #f4bf4f; }
+        .terminal-dot.green { background: #61c554; }
+
+        .terminal-body {
+            padding: 16px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12px;
+            line-height: 1.7;
+            color: var(--text-secondary);
+        }
+
+        .terminal-body .t-green { color: var(--green); }
+        .terminal-body .t-cyan { color: var(--accent); }
+        .terminal-body .t-bold { color: var(--text); font-weight: 500; }
+
+        /* ---- Success step ---- */
+        .step-success {
+            border-color: rgba(78, 202, 106, 0.3);
+            background: linear-gradient(135deg, var(--bg-card), rgba(78, 202, 106, 0.04));
+        }
+
+        .step-success .step-number {
+            background: var(--green);
+            box-shadow: 0 2px 8px rgba(78, 202, 106, 0.3);
+        }
+
+        /* ---- Footer ---- */
+        .footer {
+            margin-top: 48px;
+            text-align: center;
+            font-size: 13px;
+            color: var(--text-muted);
+        }
+
+        .footer a {
+            color: var(--accent);
+            text-decoration: none;
+        }
+
+        .footer a:hover {
+            text-decoration: underline;
+        }
+
+        /* ---- Help toggle ---- */
+        .help-toggle {
+            margin-top: 12px;
+        }
+
+        .help-toggle summary {
+            font-size: 13px;
+            color: var(--accent);
+            cursor: pointer;
+            list-style: none;
+            user-select: none;
+        }
+
+        .help-toggle summary::-webkit-details-marker { display: none; }
+
+        .help-toggle summary::before {
+            content: "▸ ";
+        }
+
+        .help-toggle[open] summary::before {
+            content: "▾ ";
+        }
+
+        .help-content {
+            margin-top: 12px;
+            padding: 16px;
+            background: var(--bg-elevated);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-size: 13px;
+            color: var(--text-secondary);
+            line-height: 1.6;
+        }
+
+        .help-content code {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12px;
+            background: var(--bg);
+            padding: 2px 6px;
+            border-radius: 3px;
+            color: var(--text);
+        }
+
+        /* ---- Responsive ---- */
+        @media (max-width: 600px) {
+            body { padding: 24px 16px 40px; }
+            .hero h1 { font-size: 26px; }
+            .step { padding: 22px 18px; }
+            .command-box { flex-wrap: wrap; }
+            .command-text { font-size: 12px; }
+            .shortcut-visual { flex-direction: column; align-items: flex-start; gap: 10px; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- ================================================================ -->
+<!-- Hero                                                             -->
+<!-- ================================================================ -->
+<div class="hero">
+    <div class="hero-icon">⚡</div>
+    <h1>Welcome to QuickClaw</h1>
+    <p>One-time setup takes about 2 minutes.<br>After that, everything works with a double-click.</p>
+</div>
+
+<!-- ================================================================ -->
+<!-- Steps                                                            -->
+<!-- ================================================================ -->
+<div class="steps">
+
+    <!-- Step 1 -->
+    <div class="step">
+        <div class="step-number">1</div>
+        <h2>Open Terminal</h2>
+        <p>Terminal is a built-in app on every Mac. The fastest way to open it:</p>
+
+        <div class="shortcut-visual">
+            <div class="keys">
+                <span class="key">⌘ Cmd</span>
+                <span class="key-plus">+</span>
+                <span class="key">Space</span>
+            </div>
+            <span class="shortcut-label">to open Spotlight, then type <strong>Terminal</strong> and press Enter</span>
+        </div>
+
+        <div class="screenshot-hint">
+            <div class="hint-title">Don't see it?</div>
+            <p>You can also find Terminal in Applications → Utilities → Terminal.</p>
+        </div>
+    </div>
+
+    <!-- Step 2 -->
+    <div class="step">
+        <div class="step-number">2</div>
+        <h2>Paste this command</h2>
+        <p>Click the <strong>Copy</strong> button below, go to Terminal, and paste it in. Then press <strong>Enter</strong>.</p>
+
+        <div class="command-box">
+            <span class="command-prompt">$</span>
+            <span class="command-text" id="commandText">bash ~/Downloads/QuickClaw-main/QuickClaw_Setup.command</span>
+            <button class="copy-btn" id="copyBtn" onclick="copyCommand()">Copy</button>
+        </div>
+
+        <p style="font-size: 13px; color: var(--text-muted);">
+            This tells your Mac it's safe to run QuickClaw, then installs everything automatically.
+        </p>
+
+        <details class="help-toggle">
+            <summary>Downloaded to a different folder?</summary>
+            <div class="help-content">
+                The command above assumes the ZIP was downloaded to your <strong>Downloads</strong> folder and the extracted folder is named <code>QuickClaw-main</code> (the default from GitHub).
+                <br><br>
+                If you renamed it or moved it, adjust the path. For example, if you put it on your Desktop:
+                <br><br>
+                <code>bash ~/Desktop/QuickClaw-main/QuickClaw_Setup.command</code>
+                <br><br>
+                If your folder is named differently (like <code>QuickClaw-v2</code>):
+                <br><br>
+                <code>bash ~/Downloads/QuickClaw-v2/QuickClaw_Setup.command</code>
+            </div>
+        </details>
+    </div>
+
+    <!-- Step 3 -->
+    <div class="step">
+        <div class="step-number">3</div>
+        <h2>Follow the prompts</h2>
+        <p>The setup will ask a couple of yes/no questions and show progress. It looks something like this:</p>
+
+        <div class="terminal-mock">
+            <div class="terminal-titlebar">
+                <span class="terminal-dot red"></span>
+                <span class="terminal-dot yellow"></span>
+                <span class="terminal-dot green"></span>
+            </div>
+            <div class="terminal-body">
+<span class="t-cyan">╔════════════════════════════════════════════╗</span>
+<span class="t-cyan">║       <span class="t-bold">Welcome to QuickClaw</span>                  ║</span>
+<span class="t-cyan">╚════════════════════════════════════════════╝</span>
+
+  This will:
+    1. Allow all QuickClaw scripts to run on your Mac
+    2. Install OpenClaw and its dependencies
+    3. Set up the QuickClaw dashboard
+
+  Ready to start? (Y/n) <span class="t-bold">Y</span>
+
+  <span class="t-green">✓</span>  QuickClaw_Install.command
+  <span class="t-green">✓</span>  QuickClaw_Launch.command
+  <span class="t-green">✓</span>  QuickClaw_Stop.command
+  <span class="t-green">✓</span>  QuickClaw_Verify.command
+  <span class="t-green">✓</span>  dashboard-files/
+
+  <span class="t-green">Done.</span> 5 scripts unlocked.
+            </div>
+        </div>
+
+        <p>Just say yes when it asks and let it run. It usually takes 1–2 minutes.</p>
+    </div>
+
+    <!-- Step 4: Done -->
+    <div class="step step-success">
+        <div class="step-number">✓</div>
+        <h2>You're all set</h2>
+        <p>That one-time setup is done. From now on, just double-click to use QuickClaw:</p>
+
+        <div style="margin-top: 12px; display: flex; flex-direction: column; gap: 8px;">
+            <div style="display: flex; align-items: baseline; gap: 10px;">
+                <strong style="font-family: 'JetBrains Mono', monospace; font-size: 13px; min-width: 230px;">QuickClaw_Launch.command</strong>
+                <span style="font-size: 13px; color: var(--text-secondary);">Start OpenClaw + dashboard</span>
+            </div>
+            <div style="display: flex; align-items: baseline; gap: 10px;">
+                <strong style="font-family: 'JetBrains Mono', monospace; font-size: 13px; min-width: 230px;">QuickClaw_Stop.command</strong>
+                <span style="font-size: 13px; color: var(--text-secondary);">Stop everything</span>
+            </div>
+            <div style="display: flex; align-items: baseline; gap: 10px;">
+                <strong style="font-family: 'JetBrains Mono', monospace; font-size: 13px; min-width: 230px;">QuickClaw_Verify.command</strong>
+                <span style="font-size: 13px; color: var(--text-secondary);">Check that everything's healthy</span>
+            </div>
+            <div style="display: flex; align-items: baseline; gap: 10px;">
+                <strong style="font-family: 'JetBrains Mono', monospace; font-size: 13px; min-width: 230px;">QuickClaw Doctor.command</strong>
+                <span style="font-size: 13px; color: var(--text-secondary);">Troubleshoot problems</span>
+            </div>
+        </div>
+
+        <p style="margin-top: 16px;">
+            Once launched, open <strong><a href="http://localhost:3000" style="color: var(--accent);">http://localhost:3000</a></strong> in your browser for the dashboard.
+        </p>
+    </div>
+
+</div>
+
+<!-- ================================================================ -->
+<!-- Footer                                                           -->
+<!-- ================================================================ -->
+<div class="footer">
+    <p>
+        QuickClaw is a hobby project by <a href="https://guyingoldglasses.com">Guy in Gold Glasses</a><br>
+        Need help? <a href="https://github.com/guyingoldglasses/QuickClaw/issues">Open an issue on GitHub</a>
+    </p>
+</div>
+
+<!-- ================================================================ -->
+<!-- Script                                                           -->
+<!-- ================================================================ -->
+<script>
+    function copyCommand() {
+        const text = document.getElementById('commandText').textContent;
+        const btn = document.getElementById('copyBtn');
+
+        navigator.clipboard.writeText(text).then(() => {
+            btn.textContent = 'Copied!';
+            btn.classList.add('copied');
+            setTimeout(() => {
+                btn.textContent = 'Copy';
+                btn.classList.remove('copied');
+            }, 2000);
+        }).catch(() => {
+            // Fallback for older browsers
+            const range = document.createRange();
+            range.selectNode(document.getElementById('commandText'));
+            window.getSelection().removeAllRanges();
+            window.getSelection().addRange(range);
+            document.execCommand('copy');
+            window.getSelection().removeAllRanges();
+            btn.textContent = 'Copied!';
+            btn.classList.add('copied');
+            setTimeout(() => {
+                btn.textContent = 'Copy';
+                btn.classList.remove('copied');
+            }, 2000);
+        });
+    }
+</script>
+
+</body>
+</html>
