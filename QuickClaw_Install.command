@@ -224,7 +224,7 @@ OPENCLAW_INSTALLED=false
 
 # Try local npm install (keeps everything on the target drive)
 info "Installing OpenClaw package..."
-if npm install open-claw --save 2>>"$LOG_FILE"; then
+if npm install open-claw --save --no-fund --no-audit 2>>"$LOG_FILE"; then
     if [[ -d "$INSTALL_DIR/node_modules/open-claw" ]]; then
         success "OpenClaw installed"
         OPENCLAW_INSTALLED=true
@@ -233,7 +233,7 @@ fi
 
 # Try alternative package name
 if [[ "$OPENCLAW_INSTALLED" == false ]]; then
-    if npm install openclaw --save 2>>"$LOG_FILE"; then
+    if npm install openclaw --save --no-fund --no-audit 2>>"$LOG_FILE"; then
         if [[ -d "$INSTALL_DIR/node_modules/openclaw" ]]; then
             success "OpenClaw installed"
             OPENCLAW_INSTALLED=true
@@ -263,7 +263,7 @@ info "Installing Antfarm..."
 
 ANTFARM_INSTALLED=false
 
-if npm install antfarm --save 2>>"$LOG_FILE"; then
+if npm install antfarm --save --no-fund --no-audit 2>>"$LOG_FILE"; then
     if [[ -d "$INSTALL_DIR/node_modules/antfarm" ]]; then
         success "Antfarm installed"
         ANTFARM_INSTALLED=true
@@ -351,7 +351,7 @@ if [[ -d "$DASHBOARD_DIR" ]]; then
 JSON
     fi
 
-    npm install --production 2>>"$LOG_FILE"
+    npm install --production --no-fund --no-audit 2>>"$LOG_FILE"
     success "Dashboard ready"
     cd "$SCRIPT_DIR"
 else
