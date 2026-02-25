@@ -10,6 +10,7 @@ INSTALL_DIR="$SCRIPT_DIR/openclaw"
 DASHBOARD_DIR="$SCRIPT_DIR/dashboard-files"
 PID_DIR="$SCRIPT_DIR/.pids"
 LOG_DIR="$SCRIPT_DIR/logs"
+DASHBOARD_PORT=3000
 
 # Colors
 RED='\033[0;31m'
@@ -183,6 +184,8 @@ fi
 echo -e "${BLUE}[info]${NC}  Starting dashboard..."
 
 DASHBOARD_LOG="$LOG_DIR/dashboard.log"
+DASHBOARD_PORT=3000
+DASHBOARD_STARTED=false
 
 if [[ -f "$DASHBOARD_DIR/server.js" ]]; then
     cd "$DASHBOARD_DIR"
@@ -193,14 +196,35 @@ if [[ -f "$DASHBOARD_DIR/server.js" ]]; then
         npm install --production >> "$DASHBOARD_LOG" 2>&1
     fi
 
-    QUICKCLAW_ROOT="$SCRIPT_DIR" nohup node server.js >> "$DASHBOARD_LOG" 2>&1 &
-    echo $! > "$PID_DIR/dashboard.pid"
+    # Handle existing listener on 3000 (common stale-process issue)
+    PORT_PID=$(lsof -ti tcp:3000 2>/dev/null | head -n1 || true)
+    if [[ -n "$PORT_PID" ]]; then
+        PORT_CMD=$(ps -p "$PORT_PID" -o command= 2>/dev/null || true)
+        if [[ "$PORT_CMD" == *"dashboard-files/server.js"* || "$PORT_CMD" == *"node server.js"* ]]; then
+            echo -e "${YELLOW}[warn]${NC}  Existing dashboard process found on :3000 (PID $PORT_PID). Reusing it."
+            echo "$PORT_PID" > "$PID_DIR/dashboard.pid"
+            DASHBOARD_STARTED=true
+        else
+            echo -e "${YELLOW}[warn]${NC}  Port 3000 in use by another process (PID $PORT_PID). Starting dashboard on 3001."
+            DASHBOARD_PORT=3001
+        fi
+    fi
 
-    sleep 2
-    DB_PID=$(cat "$PID_DIR/dashboard.pid")
-    if kill -0 "$DB_PID" 2>/dev/null; then
+    if [[ "$DASHBOARD_STARTED" != true ]]; then
+        QUICKCLAW_ROOT="$SCRIPT_DIR" DASHBOARD_PORT="$DASHBOARD_PORT" nohup node server.js >> "$DASHBOARD_LOG" 2>&1 &
+        echo $! > "$PID_DIR/dashboard.pid"
+
+        sleep 2
+        DB_PID=$(cat "$PID_DIR/dashboard.pid")
+        if kill -0 "$DB_PID" 2>/dev/null; then
+            DASHBOARD_STARTED=true
+        fi
+    fi
+
+    if [[ "$DASHBOARD_STARTED" == true ]]; then
+        DB_PID=$(cat "$PID_DIR/dashboard.pid" 2>/dev/null || echo "unknown")
         echo -e "${GREEN}[ok]${NC}    Dashboard started (PID $DB_PID)"
-        echo -e "        URL: ${BOLD}http://localhost:3000${NC}"
+        echo -e "        URL: ${BOLD}http://localhost:${DASHBOARD_PORT}${NC}"
         echo -e "        Log: $DASHBOARD_LOG"
     else
         echo -e "${RED}[fail]${NC}  Dashboard process exited. Check $DASHBOARD_LOG"
@@ -218,7 +242,7 @@ fi
 echo ""
 echo -e "${GREEN}QuickClaw is running.${NC}"
 echo ""
-echo "  Dashboard:  http://localhost:3000"
+echo "  Dashboard:  http://localhost:${DASHBOARD_PORT}"
 echo "  Gateway:    http://localhost:5000 (default)"
 echo ""
 echo "  Stop with:  QuickClaw_Stop.command"
