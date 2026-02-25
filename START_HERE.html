@@ -414,22 +414,22 @@
 
         <div class="command-box">
             <span class="command-prompt">$</span>
-            <span class="command-text" id="commandText">bash ~/Downloads/QuickClaw-main/QuickClaw_Setup.command</span>
+            <span class="command-text" id="commandText">Detecting folder...</span>
             <button class="copy-btn" id="copyBtn" onclick="copyCommand()">Copy</button>
         </div>
 
-        <p style="font-size: 13px; color: var(--text-muted);">
-            This tells your Mac it's safe to run QuickClaw, then installs everything automatically.
+        <p id="commandNote" style="font-size: 13px; color: var(--text-muted);">
+            Detecting the correct folder path from this file...
         </p>
 
         <details class="help-toggle">
             <summary>Downloaded to a different folder?</summary>
             <div class="help-content">
-                The command above assumes the ZIP was downloaded to your <strong>Downloads</strong> folder and the extracted folder is named <code>QuickClaw-main</code> (the default from GitHub).
+                The command above assumes the ZIP was downloaded to your <strong>Downloads</strong> folder and the extracted folder is named <code>QUICKCLAW-V2-main</code> (the default from GitHub).
                 <br><br>
                 If you renamed it or moved it, adjust the path. For example, if you put it on your Desktop:
                 <br><br>
-                <code>bash ~/Desktop/QuickClaw-main/QuickClaw_Setup.command</code>
+                <code>bash ~/Desktop/QUICKCLAW-V2-main/QuickClaw_Setup.command</code>
                 <br><br>
                 If your folder is named differently (like <code>QuickClaw-v2</code>):
                 <br><br>
@@ -521,33 +521,61 @@
 <!-- Script                                                           -->
 <!-- ================================================================ -->
 <script>
-    function copyCommand() {
-        const text = document.getElementById('commandText').textContent;
-        const btn = document.getElementById('copyBtn');
+(function initCommand(){
+    const el = document.getElementById('commandText');
+    const noteEl = document.getElementById('commandNote');
+    if (!el || !noteEl) return;
 
-        navigator.clipboard.writeText(text).then(() => {
-            btn.textContent = 'Copied!';
-            btn.classList.add('copied');
-            setTimeout(() => {
-                btn.textContent = 'Copy';
-                btn.classList.remove('copied');
-            }, 2000);
-        }).catch(() => {
-            // Fallback for older browsers
-            const range = document.createRange();
-            range.selectNode(document.getElementById('commandText'));
-            window.getSelection().removeAllRanges();
-            window.getSelection().addRange(range);
-            document.execCommand('copy');
-            window.getSelection().removeAllRanges();
-            btn.textContent = 'Copied!';
-            btn.classList.add('copied');
-            setTimeout(() => {
-                btn.textContent = 'Copy';
-                btn.classList.remove('copied');
-            }, 2000);
-        });
+    try {
+        const loc = window.location.href || '';
+        if (loc.startsWith('file://')) {
+            let fullPath = decodeURIComponent(loc);
+            fullPath = fullPath.replace(/^file:\/\//, '');
+            const lastSlash = fullPath.lastIndexOf('/');
+            const folderPath = fullPath.substring(0, lastSlash);
+            const command = 'bash "' + folderPath + '/QuickClaw_Setup.command"';
+            el.textContent = command;
+            noteEl.innerHTML = 'This tells your Mac it's safe to run QuickClaw, then installs everything automatically.<br><span style="color: var(--green); font-size: 12px; margin-top: 4px; display: inline-block;">✓ Path auto-detected from this file's location</span>';
+        } else {
+            showFallback(el, noteEl);
+        }
+    } catch (e) {
+        showFallback(el, noteEl);
     }
+})();
+
+function showFallback(el, noteEl) {
+    el.textContent = 'bash ~/Downloads/QUICKCLAW-V2-main/QuickClaw_Setup.command';
+    noteEl.innerHTML = 'This tells your Mac it's safe to run QuickClaw, then installs everything automatically.<br><span style="color: var(--warm); font-size: 12px; margin-top: 4px; display: inline-block;">If your folder name is different, see help below</span>';
+}
+
+function copyCommand() {
+    const text = document.getElementById('commandText').textContent;
+    const btn = document.getElementById('copyBtn');
+    if (text === 'Detecting folder...') return;
+
+    navigator.clipboard.writeText(text).then(() => {
+        btn.textContent = 'Copied!';
+        btn.classList.add('copied');
+        setTimeout(() => {
+            btn.textContent = 'Copy';
+            btn.classList.remove('copied');
+        }, 2000);
+    }).catch(() => {
+        const range = document.createRange();
+        range.selectNode(document.getElementById('commandText'));
+        window.getSelection().removeAllRanges();
+        window.getSelection().addRange(range);
+        document.execCommand('copy');
+        window.getSelection().removeAllRanges();
+        btn.textContent = 'Copied!';
+        btn.classList.add('copied');
+        setTimeout(() => {
+            btn.textContent = 'Copy';
+            btn.classList.remove('copied');
+        }, 2000);
+    });
+}
 </script>
 
 </body>
